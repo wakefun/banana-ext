@@ -3,7 +3,7 @@
   "name": "Banana AI Launcher",
   "version": "1.0",
   "description": "Floating banana button for AI studios",
-  "permissions": ["notifications", "system.display"],
+  "permissions": ["notifications", "system.display", "storage"],
   "host_permissions": [
     "https://chatgpt.com/*",
     "https://gemini.google.com/*",

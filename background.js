@@ -1,4 +1,40 @@
 const notificationToWindow = new Map();
+const NOTIFICATION_WINDOW_KEY = 'notificationToWindow';
+
+function setNotificationWindowId(notifId, windowId) {
+  notificationToWindow.set(notifId, windowId);
+  chrome.storage.session.get(NOTIFICATION_WINDOW_KEY, (items) => {
+    const mapping = items[NOTIFICATION_WINDOW_KEY] || {};
+    mapping[notifId] = windowId;
+    chrome.storage.session.set({ [NOTIFICATION_WINDOW_KEY]: mapping });
+  });
+}
+
+function getNotificationWindowId(notifId, cb) {
+  if (notificationToWindow.has(notifId)) {
+    cb(notificationToWindow.get(notifId));
+    return;
+  }
+  chrome.storage.session.get(NOTIFICATION_WINDOW_KEY, (items) => {
+    const mapping = items[NOTIFICATION_WINDOW_KEY] || {};
+    const windowId = mapping[notifId];
+    if (windowId !== undefined) {
+      notificationToWindow.set(notifId, windowId);
+    }
+    cb(windowId);
+  });
+}
+
+function clearNotificationWindowId(notifId) {
+  notificationToWindow.delete(notifId);
+  chrome.storage.session.get(NOTIFICATION_WINDOW_KEY, (items) => {
+    const mapping = items[NOTIFICATION_WINDOW_KEY];
+    if (!mapping || !Object.prototype.hasOwnProperty.call(mapping, notifId)) return;
+    const nextMapping = { ...mapping };
+    delete nextMapping[notifId];
+    chrome.storage.session.set({ [NOTIFICATION_WINDOW_KEY]: nextMapping });
+  });
+}
 
 chrome.runtime.onMessage.addListener((msg, sender) => {
   if (msg.type === 'OPEN_BANANA_CONSOLE') {
@@ -14,18 +50,27 @@ chrome.runtime.onMessage.addListener((msg, sender) => {
       message: 'Vertex AI Studio 图片生成完成',
       priority: 2
     });
-    if (sender.tab && sender.tab.windowId) {
-      notificationToWindow.set(notifId, sender.tab.windowId);
+    if (sender.tab && typeof sender.tab.windowId === 'number') {
+      setNotificationWindowId(notifId, sender.tab.windowId);
     }
   }
 });
 
 chrome.notifications.onClicked.addListener((notifId) => {
-  const windowId = notificationToWindow.get(notifId);
-  if (windowId) {
-    chrome.windows.update(windowId, { focused: true });
-    notificationToWindow.delete(notifId);
-  }
+  getNotificationWindowId(notifId, (windowId) => {
+    const finalize = () => clearNotificationWindowId(notifId);
+    if (typeof windowId !== 'number') {
+      createBananaWindow();
+      finalize();
+      return;
+    }
+    chrome.windows.update(windowId, { focused: true }, () => {
+      if (chrome.runtime.lastError) {
+        createBananaWindow();
+      }
+      finalize();
+    });
+  });
 });
 
 function createBananaWindow() {
