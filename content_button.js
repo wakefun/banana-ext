@@ -1,6 +1,8 @@
 (function() {
+  // 防止重复注入
   if (document.getElementById('banana-float-btn')) return;
 
+  // 默认设置
   const DEFAULT_SETTINGS = {
     output: '图片和文字',
     aspectRatio: '1:1',
@@ -10,6 +12,7 @@
     allowSearch: false
   };
 
+  // 设置选项配置
   const SETTING_OPTIONS = [
     { key: 'output', label: '输出', options: ['图片和文字', '图片'] },
     { key: 'aspectRatio', label: '宽高比', options: ['1:1', '3:2', '2:3', '3:4', '4:3', '4:5', '5:4', '9:16', '16:9', '21:9'] },
@@ -18,14 +21,15 @@
     { key: 'portrait', label: '人像生成', options: ['允许（所有年龄段）', '允许（仅限成人）', '不允许'] }
   ];
 
+  // 面板样式 - 3D面包科幻风
   const PANEL_STYLES = `
     #banana-settings-overlay {
-      --bread-bg: #f0f2e8;
-      --bread-shadow-light: #ffffff;
-      --bread-shadow-dark: #d5d9c5;
+      --bread-bg: #c5d4a0;
+      --bread-shadow-light: #dbe8c4;
+      --bread-shadow-dark: #a3b580;
       --banana-yellow: #FFE135;
       --banana-yellow-dark: #FFD000;
-      --banana-glow: rgba(255, 225, 53, 0.5);
+      --banana-glow: rgba(255, 225, 53, 0.25);
       --text-color: #5d5d48;
       position: fixed;
       bottom: 100px;
@@ -45,10 +49,11 @@
     .banana-panel {
       width: 320px;
       background-color: var(--bread-bg);
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.1'/%3E%3C/svg%3E");
       border-radius: 30px;
       padding: 25px;
       box-sizing: border-box;
-      box-shadow: 20px 20px 60px #c5c9b5, -20px -20px 60px #ffffff, inset 0 0 0 2px rgba(255, 255, 255, 0.5);
+      box-shadow: 20px 20px 60px var(--bread-shadow-dark), -20px -20px 60px var(--bread-shadow-light), inset 0 0 0 2px rgba(255, 255, 255, 0.3);
       position: relative;
       overflow: visible;
     }
@@ -74,20 +79,30 @@
     }
     .panel-title {
       font-size: 1.2rem;
-      font-weight: 800;
+      font-weight: 900;
       text-transform: uppercase;
       letter-spacing: 2px;
-      color: var(--text-color);
-      background: linear-gradient(90deg, var(--banana-yellow-dark), var(--text-color) 30%, var(--text-color) 70%, var(--banana-yellow));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      text-shadow: 0px 2px 4px rgba(255, 225, 53, 0.2);
-      background-size: 200% auto;
-      animation: text-shine 5s linear infinite;
+      color: transparent;
+      position: relative;
+      display: inline-block;
     }
-    @keyframes text-shine {
-      to { background-position: 200% center; }
+    .panel-title::before,
+    .panel-title::after {
+      content: attr(data-text);
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      color: #000;
+    }
+    .panel-title::before {
+      clip-path: polygon(0 0, 100% 0, 100% 45%, 0 55%);
+      transform: translate(-1px, -1px);
+    }
+    .panel-title::after {
+      clip-path: polygon(0 55%, 100% 45%, 100% 100%, 0 100%);
+      transform: translate(1px, 1px);
     }
     .setting-item {
       margin-bottom: 18px;
@@ -106,6 +121,7 @@
       width: 100%;
       font-size: 0.9rem;
       color: var(--text-color);
+      user-select: none;
     }
     .select-trigger {
       display: flex;
@@ -208,7 +224,7 @@
     .toggle-switch:checked::after {
       left: 33px;
       background: var(--banana-yellow);
-      box-shadow: 0 0 10px var(--banana-yellow), 0 0 20px var(--banana-glow);
+      box-shadow: 0 0 5px var(--banana-yellow), 0 0 10px var(--banana-glow);
     }
     .confirm-btn {
       width: 100%;
@@ -246,6 +262,7 @@
     }
   `;
 
+  // 注入样式
   function injectStyles() {
     if (document.getElementById('banana-panel-styles')) return;
     const style = document.createElement('style');
@@ -254,6 +271,7 @@
     document.head.appendChild(style);
   }
 
+  // 获取设置
   function getSettings() {
     return new Promise(resolve => {
       chrome.storage.sync.get(DEFAULT_SETTINGS, items => {
@@ -262,10 +280,12 @@
     });
   }
 
+  // 保存设置
   function saveSettings(settings) {
     return new Promise(resolve => chrome.storage.sync.set(settings, resolve));
   }
 
+  // 创建自定义选择框
   function createCustomSelect({ key, label, options }) {
     const wrapper = document.createElement('div');
     wrapper.className = 'setting-item';
@@ -302,6 +322,7 @@
 
     trigger.addEventListener('click', (e) => {
       e.stopPropagation();
+      // 关闭其他打开的选择框
       document.querySelectorAll('.custom-select.open').forEach(s => {
         if (s !== selectContainer) s.classList.remove('open');
       });
@@ -315,6 +336,7 @@
     return wrapper;
   }
 
+  // 创建开关行
   function createToggleRow() {
     const wrapper = document.createElement('div');
     wrapper.className = 'setting-item toggle-row';
@@ -334,6 +356,7 @@
     return wrapper;
   }
 
+  // 创建设置面板
   function createPanel() {
     const overlay = document.createElement('div');
     overlay.id = 'banana-settings-overlay';
@@ -341,20 +364,24 @@
     const panel = document.createElement('div');
     panel.className = 'banana-panel';
 
+    // 标题
     const header = document.createElement('div');
     header.className = 'panel-header';
     const title = document.createElement('div');
     title.className = 'panel-title';
-    title.textContent = 'Banana Config';
+    title.textContent = '大香蕉助手';
+    title.dataset.text = '大香蕉助手';
     header.appendChild(title);
     panel.appendChild(header);
 
+    // 设置内容
     const content = document.createElement('div');
     content.id = 'settings-content';
     SETTING_OPTIONS.forEach(setting => content.appendChild(createCustomSelect(setting)));
     content.appendChild(createToggleRow());
     panel.appendChild(content);
 
+    // 确认按钮
     const confirmBtn = document.createElement('button');
     confirmBtn.className = 'confirm-btn';
     confirmBtn.textContent = '确认';
@@ -368,6 +395,7 @@
 
     overlay.appendChild(panel);
 
+    // 点击外部关闭下拉框
     document.addEventListener('click', (e) => {
       if (!overlay.contains(e.target)) {
         overlay.querySelectorAll('.custom-select.open').forEach(s => s.classList.remove('open'));
@@ -377,6 +405,7 @@
     return overlay;
   }
 
+  // 加载设置到面板
   async function loadSettings(overlay) {
     const settings = await getSettings();
     overlay.querySelectorAll('.custom-select[data-setting-key]').forEach(select => {
@@ -394,6 +423,7 @@
     if (toggle) toggle.checked = Boolean(settings.allowSearch);
   }
 
+  // 收集面板设置
   function collectSettings(overlay) {
     const settings = { ...DEFAULT_SETTINGS };
     overlay.querySelectorAll('.custom-select[data-setting-key]').forEach(select => {
@@ -406,31 +436,43 @@
     return settings;
   }
 
-  injectStyles();
+  // 初始化
+  function init() {
+    if (!document.body) return;
+    injectStyles();
 
-  const btn = document.createElement('div');
-  btn.id = 'banana-float-btn';
-  btn.style.cssText = 'position:fixed;bottom:20px;right:20px;width:60px;height:60px;background:#fff;border-radius:50%;box-shadow:0 4px 12px rgba(0,0,0,.15);z-index:2147483647;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .2s';
+    // 创建悬浮按钮
+    const btn = document.createElement('div');
+    btn.id = 'banana-float-btn';
+    btn.style.cssText = 'position:fixed;bottom:20px;right:20px;width:60px;height:60px;background:#fff;border-radius:50%;box-shadow:0 4px 12px rgba(0,0,0,.15);z-index:2147483647;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .2s';
 
-  const img = document.createElement('img');
-  img.src = chrome.runtime.getURL('icons/banana.svg');
-  img.style.cssText = 'width:40px;height:40px';
-  btn.appendChild(img);
+    const img = document.createElement('img');
+    img.src = chrome.runtime.getURL('icons/banana.svg');
+    img.style.cssText = 'width:40px;height:40px';
+    btn.appendChild(img);
 
-  const panel = createPanel();
+    const panel = createPanel();
 
-  btn.onmouseenter = () => btn.style.transform = 'scale(1.1)';
-  btn.onmouseleave = () => btn.style.transform = 'scale(1)';
-  btn.onclick = async () => {
-    const isOpen = panel.classList.contains('visible');
-    if (isOpen) {
-      panel.classList.remove('visible');
-    } else {
-      await loadSettings(panel);
-      panel.classList.add('visible');
-    }
-  };
+    btn.onmouseenter = () => btn.style.transform = 'scale(1.1)';
+    btn.onmouseleave = () => btn.style.transform = 'scale(1)';
+    btn.onclick = async () => {
+      const isOpen = panel.classList.contains('visible');
+      if (isOpen) {
+        panel.classList.remove('visible');
+      } else {
+        await loadSettings(panel);
+        panel.classList.add('visible');
+      }
+    };
 
-  document.body.appendChild(btn);
-  document.body.appendChild(panel);
+    document.body.appendChild(btn);
+    document.body.appendChild(panel);
+  }
+
+  // 确保 DOM 就绪后初始化
+  if (document.body) {
+    init();
+  } else {
+    document.addEventListener('DOMContentLoaded', init, { once: true });
+  }
 })();
