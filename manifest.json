@@ -3,7 +3,7 @@
   "name": "Banana AI Launcher",
   "version": "1.0",
   "description": "Floating banana button for AI studios",
-  "permissions": ["notifications", "system.display", "storage"],
+  "permissions": ["notifications", "system.display", "storage", "scripting"],
   "host_permissions": [
     "https://chatgpt.com/*",
     "https://gemini.google.com/*",
@@ -11,24 +11,19 @@
     "https://www.deepseek.com/*",
     "https://chat.deepseek.com/*",
     "https://www.doubao.com/*",
+    "https://linux.do/*",
+    "https://idcflare.com/*",
     "https://console.cloud.google.com/*"
   ],
+  "optional_host_permissions": ["<all_urls>"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Banana Settings"
+  },
   "background": {
     "service_worker": "background.js"
   },
   "content_scripts": [
-    {
-      "matches": [
-        "https://chatgpt.com/*",
-        "https://gemini.google.com/*",
-        "https://grok.x.ai/*",
-        "https://www.deepseek.com/*",
-        "https://chat.deepseek.com/*",
-        "https://www.doubao.com/*"
-      ],
-      "js": ["content_button.js"],
-      "run_at": "document_end"
-    },
     {
       "matches": ["https://console.cloud.google.com/*"],
       "js": ["content_automation.js"],
@@ -42,6 +37,6 @@
   },
   "web_accessible_resources": [{
     "resources": ["icons/banana.svg"],
-    "matches": ["https://chatgpt.com/*", "https://gemini.google.com/*", "https://grok.x.ai/*", "https://www.deepseek.com/*", "https://chat.deepseek.com/*", "https://www.doubao.com/*"]
+    "matches": ["<all_urls>"]
   }]
 }

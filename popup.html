@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>Banana Settings</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <img src="icons/banana.svg" class="logo" alt="logo">
+      <h1>网站设置</h1>
+    </div>
+    <div class="list-container">
+      <ul id="site-list"></ul>
+    </div>
+    <div class="input-area">
+      <input type="text" id="new-site" placeholder="添加新网站 (如 example.com)">
+      <button id="add-btn" title="添加">+</button>
+    </div>
+    <div class="footer">
+      <button id="save-btn">保存设置</button>
+    </div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -24,12 +24,12 @@
   // 面板样式 - 3D面包科幻风
   const PANEL_STYLES = `
     #banana-settings-overlay {
-      --bread-bg: #c5d4a0;
-      --bread-shadow-light: #dbe8c4;
-      --bread-shadow-dark: #a3b580;
-      --banana-yellow: #FFE135;
-      --banana-yellow-dark: #FFD000;
-      --banana-glow: rgba(255, 225, 53, 0.25);
+      --bread-bg: #d0d8bc;
+      --bread-shadow-light: #e5ebd5;
+      --bread-shadow-dark: #b5bda3;
+      --banana-yellow: #E8D88A;
+      --banana-yellow-dark: #D4C470;
+      --banana-glow: rgba(200, 180, 80, 0.15);
       --text-color: #5d5d48;
       position: fixed;
       bottom: 100px;
@@ -49,11 +49,11 @@
     .banana-panel {
       width: 320px;
       background-color: var(--bread-bg);
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.1'/%3E%3C/svg%3E");
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.08'/%3E%3C/svg%3E");
       border-radius: 30px;
       padding: 25px;
       box-sizing: border-box;
-      box-shadow: 20px 20px 60px var(--bread-shadow-dark), -20px -20px 60px var(--bread-shadow-light), inset 0 0 0 2px rgba(255, 255, 255, 0.3);
+      box-shadow: 12px 12px 30px var(--bread-shadow-dark), -12px -12px 30px var(--bread-shadow-light), inset 0 0 0 1px rgba(255, 255, 255, 0.2);
       position: relative;
       overflow: visible;
     }
@@ -64,7 +64,7 @@
       left: -50%;
       width: 200%;
       height: 200%;
-      background: linear-gradient(45deg, transparent 45%, rgba(255, 225, 53, 0.03) 50%, transparent 55%);
+      background: linear-gradient(45deg, transparent 45%, rgba(200, 180, 80, 0.02) 50%, transparent 55%);
       animation: hologram-swipe 8s infinite linear;
       pointer-events: none;
     }
@@ -438,23 +438,62 @@
 
   // 初始化
   function init() {
-    if (!document.body) return;
-    injectStyles();
+    if (!document.body || document.getElementById('banana-shadow-host')) return;
 
-    // 创建悬浮按钮
+    // 创建 Shadow DOM 宿主
+    const host = document.createElement('div');
+    host.id = 'banana-shadow-host';
+    host.style.cssText = 'position:fixed;z-index:2147483647;bottom:0;right:0;pointer-events:none';
+    document.body.appendChild(host);
+
+    const shadow = host.attachShadow({ mode: 'closed' });
+
+    // 注入样式到 Shadow DOM
+    const style = document.createElement('style');
+    style.textContent = PANEL_STYLES;
+    shadow.appendChild(style);
+
+    // 创建悬浮按钮 - Material Design 3 FAB 风格
     const btn = document.createElement('div');
     btn.id = 'banana-float-btn';
-    btn.style.cssText = 'position:fixed;bottom:20px;right:20px;width:60px;height:60px;background:#fff;border-radius:50%;box-shadow:0 4px 12px rgba(0,0,0,.15);z-index:2147483647;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .2s';
+    btn.style.cssText = `
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 56px;
+      height: 56px;
+      border-radius: 16px;
+      background-color: #FFF1AA;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.05);
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      pointer-events: auto;
+    `;
 
     const img = document.createElement('img');
     img.src = chrome.runtime.getURL('icons/banana.svg');
-    img.style.cssText = 'width:40px;height:40px';
+    img.style.cssText = 'width:40px;height:40px;pointer-events:none;filter:drop-shadow(0 2px 2px rgba(180,140,0,0.25));transition:filter 0.2s';
     btn.appendChild(img);
 
     const panel = createPanel();
 
-    btn.onmouseenter = () => btn.style.transform = 'scale(1.1)';
-    btn.onmouseleave = () => btn.style.transform = 'scale(1)';
+    btn.onmouseenter = () => {
+      btn.style.backgroundColor = '#FFE680';
+      btn.style.boxShadow = '0 6px 16px rgba(0,0,0,0.12), 0 2px 6px rgba(0,0,0,0.08)';
+      btn.style.transform = 'translateY(-1px)';
+      img.style.filter = 'drop-shadow(0 3px 3px rgba(180,140,0,0.3))';
+    };
+    btn.onmouseleave = () => {
+      btn.style.backgroundColor = '#FFF1AA';
+      btn.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.05)';
+      btn.style.transform = 'translateY(0)';
+      img.style.filter = 'drop-shadow(0 2px 2px rgba(180,140,0,0.25))';
+    };
+    btn.onmousedown = () => btn.style.transform = 'scale(0.96)';
+    btn.onmouseup = () => btn.style.transform = 'translateY(-1px)';
     btn.onclick = async () => {
       const isOpen = panel.classList.contains('visible');
       if (isOpen) {
@@ -465,8 +504,8 @@
       }
     };
 
-    document.body.appendChild(btn);
-    document.body.appendChild(panel);
+    shadow.appendChild(btn);
+    shadow.appendChild(panel);
   }
 
   // 确保 DOM 就绪后初始化

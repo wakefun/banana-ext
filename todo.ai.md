@@ -89,3 +89,30 @@
 - [x] 检查代码，去除多余代码，修正不规范代码。统一使用中文对代码进行注释。
 - [x] 使用香蕉的绿色最为底色，我看看效果
 - [x] 背景增加一些颗粒感和纹理感，表现出香蕉皮的质感；顶部文字去除发光特效，使用黑体黑色大字，并在文字上加几道大的裂纹。
+- [x] 图片生成完毕的判断逻辑需要修改，需要先检测到`span.cancel-button__timer`出现，代表图片正在生成中，等待新的img出现并发出通知。
+- [x] 当检测到`span.prompt-input-box__error`时，发出通知，告知用户图片生成失败
+- [x] 优化图片检测，这个img元素的祖先元素div中不能有`message-box--user`这个class。
+- [x] 修改错误通知判断，不是判断 `span.prompt-input-box__error` ，而是 `span.prompt-response-text-area--error-color` 且子元素p中文案含有 `error-code-429` 则提示用户，请求被限速，请重试。
+      ```html
+      <span _ngcontent-ng-c2718871898="" class="prompt-response-text-area prompt-response-text-area--error-color" sandboxuid="0"><span _ngcontent-ng-c2718871898="" class="ai-markdown-artifact-renderer" sandboxuid="0"><p sandboxuid="0">Resource exhausted. Please try again later. Please refer to https://cloud.google.com/vertex-ai/generative-ai/docs/error-code-429 for more details.</p>
+      </span></span>
+      ```
+- [x]  检测到`span.cancel-button__timer`出现后，0.5s后自动隐藏窗口到后台。
+- [x]  增加设置页面，基于optional_host_permissions权限，支持存储用户自定义的网站列表。默认支持的列表中增加`linux.do`和`idcflare.com`。
+- [x]  优化香蕉按钮的UI，保留现有svg图标的同时，要有material design风格。
+- [x]  香蕉按钮底色浅一点，svg图标要有在按钮上凸显出来的立体感。
+- [x]  整体UI要降低饱和度和光晕
+- [x]  是否可以使用shadow-dom，避免网站的样式污染
+- [x]  没有无痕窗口权限，安装时应该申请或者使用时应该申请。你的理解有误，始终都只能使用无痕窗口，请检查是否有在无痕窗口使用的权限并给出提示。
+- [x]  插件设置页面添加新增的网站无效，按钮不会出来，检查问题并修复。
+- [x]  优化设置页面，点击+号后，新增的放在列表第一个方便查看。
+- [x]  测试发现新增网站并没有放到第一个，而且点击+没有清空当前输入。正确的处理应该是点击+，新增的放到第一个，并且高亮显示本次新增未保存的。列表有增删变化之前保存按钮应该是灰色的。
+- [x]  保存设置后应该弹窗提示用户刷新页面后生效
+- [x]  用户删除后，没有去掉已经申请到的页面权限。
+- [x]  权限逻辑处理似乎有问题，用户保存设置，浏览器像用户弹窗申请权限后，用户点击了允许，但是设置列表里面却没新增，需要再添加一次才生效。仔细检查问题
+- [x] 修复 popup.js URL 处理不完整的问题（未处理尾部斜杠）
+- [x] 修复 popup.js alert 阻塞导致 UI 状态异常的问题
+- [x] 修复 popup.js 权限操作失败时静默吞掉错误的问题
+- [x] 修复 popup.js 删除网站后索引错误的问题
+- [x] 修复 content_automation.js 429 错误通知无法重置的问题
+- [x] 修复 background.js 通知点击后窗口处理不完善的问题

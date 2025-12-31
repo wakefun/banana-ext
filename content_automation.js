@@ -6,6 +6,10 @@
   const notified = new Set();
   // 设置自动化是否已完成
   let settingsAutomationDone = false;
+  // 是否正在生成图片
+  let isGenerating = false;
+  // 已通知的错误集合
+  const notifiedErrors = new Set();
 
   // 默认设置
   const DEFAULT_SETTINGS = {
@@ -131,23 +135,57 @@
     document.querySelectorAll('.prompt-input-container').forEach(el => el.style.padding = '10px 0 80px 0');
   }
 
-  // 检查图片生成并发送通知
-  function checkImages() {
-    document.querySelectorAll('.generated-image__img').forEach(img => {
-      const src = img.src || img.dataset.src || img.getAttribute('src');
-      if (src && !notified.has(src)) {
-        notified.add(src);
-        chrome.runtime.sendMessage({ type: 'IMAGE_GENERATED' });
+  // 检查图片生成状态
+  function checkGenerationStatus() {
+    // 检测是否正在生成（timer出现）
+    const timer = document.querySelector('span.cancel-button__timer');
+    if (timer && !isGenerating) {
+      isGenerating = true;
+      // 0.5s后隐藏窗口到后台
+      setTimeout(() => {
+        chrome.runtime.sendMessage({ type: 'HIDE_WINDOW' });
+      }, 500);
+    }
+
+    // 检测429限速错误
+    const errorEl = document.querySelector('span.prompt-response-text-area--error-color');
+    if (errorEl) {
+      const pText = errorEl.querySelector('p')?.textContent || '';
+      const has429 = pText.includes('error-code-429');
+      if (has429 && !notifiedErrors.has('429')) {
+        notifiedErrors.add('429');
+        chrome.runtime.sendMessage({ type: 'IMAGE_ERROR', message: '请求被限速，请重试' });
       }
-    });
+      if (!has429) notifiedErrors.delete('429');
+    } else {
+      // 错误元素消失时也清除标记
+      notifiedErrors.delete('429');
+    }
+
+    // 仅在生成中状态下检测新图片
+    if (isGenerating) {
+      document.querySelectorAll('.generated-image__img').forEach(img => {
+        // 排除用户消息框中的图片
+        if (img.closest('.message-box--user')) return;
+        const src = img.src || img.dataset.src || img.getAttribute('src');
+        if (src && !notified.has(src)) {
+          notified.add(src);
+          chrome.runtime.sendMessage({ type: 'IMAGE_GENERATED' });
+        }
+      });
+      // 生成完成后重置状态
+      if (!timer) {
+        isGenerating = false;
+      }
+    }
   }
 
   // 启动观察器
   function startObservers() {
     if (!document.body) return;
-    new MutationObserver(() => { automate(); checkImages(); runSettingsAutomation(); })
+    new MutationObserver(() => { automate(); checkGenerationStatus(); runSettingsAutomation(); })
       .observe(document.body, { childList: true, subtree: true });
-    setTimeout(() => { automate(); checkImages(); runSettingsAutomation(); }, 1000);
+    setTimeout(() => { automate(); checkGenerationStatus(); runSettingsAutomation(); }, 1000);
   }
 
   // 确保 DOM 就绪后启动
