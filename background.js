@@ -1,16 +1,5 @@
-// 默认支持的网站列表
-const DEFAULT_SITES = [
-  'chatgpt.com',
-  'gemini.google.com',
-  'grok.x.ai',
-  'deepseek.com',
-  'www.deepseek.com',
-  'chat.deepseek.com',
-  'doubao.com',
-  'www.doubao.com',
-  'linux.do',
-  'idcflare.com'
-];
+// 加载共享配置
+importScripts('shared_config.js');
 
 // 注册 content scripts
 async function registerContentScripts(sites) {
@@ -22,12 +11,23 @@ async function registerContentScripts(sites) {
   if (!sites || sites.length === 0) return;
 
   const matches = sites.map(site => `https://${site}/*`);
-  await chrome.scripting.registerContentScripts([{
-    id: 'banana-button',
-    matches: matches,
-    js: ['content_button.js'],
-    runAt: 'document_end'
-  }]);
+  try {
+    await chrome.scripting.registerContentScripts([{
+      id: 'banana-button',
+      matches: matches,
+      js: ['shared_config.js', 'content_button.js'],
+      runAt: 'document_end'
+    }]);
+  } catch (e) {
+    console.warn('registerContentScripts failed', e);
+    chrome.notifications.create('script-registration-failed', {
+      type: 'basic',
+      iconUrl: 'icons/banana-48.png',
+      title: '脚本注册失败',
+      message: '权限不足，部分站点无法注入按钮',
+      priority: 2
+    });
+  }
 }
 
 // 初始化：加载设置并注册脚本
@@ -86,6 +86,36 @@ function clearNotificationWindowId(notifId) {
     chrome.storage.session.set({ [NOTIFICATION_WINDOW_KEY]: nextMapping });
   });
 }
+
+// 根据窗口ID清除所有相关通知映射
+function clearNotificationsByWindowId(windowId) {
+  const removedIds = [];
+  for (const [notifId, info] of notificationToWindow.entries()) {
+    if (info && info.windowId === windowId) {
+      notificationToWindow.delete(notifId);
+      removedIds.push(notifId);
+    }
+  }
+  // 同时清理 session storage（处理 service worker 重启的情况）
+  chrome.storage.session.get(NOTIFICATION_WINDOW_KEY, (items) => {
+    const mapping = items[NOTIFICATION_WINDOW_KEY];
+    if (!mapping) return;
+    const nextMapping = { ...mapping };
+    let changed = false;
+    for (const [notifId, info] of Object.entries(nextMapping)) {
+      if (info && info.windowId === windowId) {
+        delete nextMapping[notifId];
+        changed = true;
+      }
+    }
+    if (changed) chrome.storage.session.set({ [NOTIFICATION_WINDOW_KEY]: nextMapping });
+  });
+}
+
+// 监听窗口关闭事件，清理通知映射
+chrome.windows.onRemoved.addListener((windowId) => {
+  clearNotificationsByWindowId(windowId);
+});
 
 // 监听消息
 chrome.runtime.onMessage.addListener((msg, sender) => {
@@ -181,18 +211,18 @@ chrome.notifications.onClicked.addListener((notifId) => {
 function createBananaWindow() {
   // 检查无痕窗口权限
   chrome.extension.isAllowedIncognitoAccess((allowed) => {
-    if (!allowed) {
-      // 没有无痕权限，提示用户
+    const incognito = Boolean(allowed);
+    if (!incognito) {
+      // 没有无痕权限，提示用户并改用普通窗口
       chrome.notifications.create('incognito-permission', {
         type: 'basic',
         iconUrl: 'icons/banana-48.png',
-        title: '需要无痕窗口权限',
-        message: '请在扩展设置中启用"在无痕模式下允许"',
+        title: '无痕权限未启用',
+        message: '已改为在普通窗口打开',
         priority: 2
       });
-      return;
     }
-    // 有权限，创建无痕窗口
+    // 创建窗口（根据权限决定是否无痕）
     chrome.system.display.getInfo((displays) => {
       const primary = displays.find(d => d.isPrimary) || displays[0];
       const workArea = primary.workArea;
@@ -200,7 +230,7 @@ function createBananaWindow() {
       const left = Math.max(workArea.left, workArea.left + workArea.width - width);
       chrome.windows.create({
         url: 'https://console.cloud.google.com/vertex-ai/studio/multimodal;mode=prompt?model=gemini-3-pro-image-preview',
-        incognito: true,
+        incognito,
         width,
         height: workArea.height,
         left,

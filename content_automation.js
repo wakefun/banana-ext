@@ -12,7 +12,7 @@
   const notifiedErrors = new Set();
 
   // 默认设置
-  const DEFAULT_SETTINGS = {
+  const DEFAULT_SETTINGS = self.DEFAULT_SETTINGS || {
     output: '图片和文字',
     aspectRatio: '1:1',
     resolution: '1k',
@@ -22,20 +22,21 @@
   };
 
   // 设置选项配置
-  const SETTING_OPTIONS = [
-    { key: 'output', options: ['图片和文字', '图片'] },
-    { key: 'aspectRatio', options: ['1:1', '3:2', '2:3', '3:4', '4:3', '4:5', '5:4', '9:16', '16:9', '21:9'] },
-    { key: 'resolution', options: ['1k', '2k', '4k'] },
-    { key: 'format', options: ['png', 'jpeg'] },
-    { key: 'portrait', options: ['允许（所有年龄段）', '允许（仅限成人）', '不允许'] }
+  const SETTING_OPTIONS = self.SETTING_OPTIONS || [
+    { key: 'output', label: '输出', options: ['图片和文字', '图片'] },
+    { key: 'aspectRatio', label: '宽高比', options: ['1:1', '3:2', '2:3', '3:4', '4:3', '4:5', '5:4', '9:16', '16:9', '21:9'] },
+    { key: 'resolution', label: '输出分辨率', options: ['1k', '2k', '4k'] },
+    { key: 'format', label: '输出格式', options: ['png', 'jpeg'] },
+    { key: 'portrait', label: '人像生成', options: ['允许（所有年龄段）', '允许（仅限成人）', '不允许'] }
   ];
 
-  // 页面元素选择器
-  const PANEL_OPEN_BTN = 'button[aria-label="收起面板"]';
-  const PANEL_CLOSE_BTN = 'button[aria-label="展开面板"]';
+  // 页面元素选择器（使用图标选择器，避免依赖中文）
+  const PANEL_OPEN_ICON = 'svg[data-icon-name="expandAllIcon"]';
+  const PANEL_CLOSE_ICON = 'svg[data-icon-name="closeIcon"]';
   const SELECT_TRIGGER = 'div.cfc-select-value';
   const SELECT_OPTIONS = '.mdc-list-item__primary-text';
   const GROUNDING_TOGGLE = 'button[role="switch"][name="groundingGoogleSearch"]';
+  const CONSENT_BUTTON = 'button.mdc-button.mat-mdc-button-base.gmat-mdc-button.mat-primary.mat-mdc-button-disabled-interactive.cm-button.mdc-button--unelevated.mat-mdc-unelevated-button';
 
   // 获取设置
   function getSettings() {
@@ -65,18 +66,25 @@
     return index === -1 ? 0 : index;
   }
 
+  // 根据图标选择器获取按钮
+  function getPanelButton(iconSelector) {
+    const icon = document.querySelector(iconSelector);
+    return icon ? icon.closest('button') : null;
+  }
+
   // 执行设置自动化
   async function runSettingsAutomation() {
     if (settingsAutomationDone || !document.body) return;
 
-    // 等待面板按钮出现
-    const panelToggle = await waitFor(() => document.querySelector(PANEL_CLOSE_BTN) || document.querySelector(PANEL_OPEN_BTN), 10000);
+    // 等待面板按钮出现（使用图标选择器）
+    const panelToggle = await waitFor(() => getPanelButton(PANEL_OPEN_ICON) || getPanelButton(PANEL_CLOSE_ICON), 10000);
     if (!panelToggle) return;
 
     // 如果面板关闭，先打开
-    if (panelToggle.matches(PANEL_CLOSE_BTN)) {
-      panelToggle.click();
-      if (!await waitFor(() => document.querySelector(PANEL_OPEN_BTN), 3000)) return;
+    const openBtn = getPanelButton(PANEL_OPEN_ICON);
+    if (openBtn) {
+      openBtn.click();
+      if (!await waitFor(() => getPanelButton(PANEL_CLOSE_ICON), 3000)) return;
     }
 
     // 等待下拉框出现
@@ -112,7 +120,7 @@
     }
 
     // 关闭面板
-    const closeBtn = document.querySelector(PANEL_OPEN_BTN);
+    const closeBtn = getPanelButton(PANEL_CLOSE_ICON);
     if (closeBtn) closeBtn.click();
   }
 
@@ -122,13 +130,9 @@
     document.querySelectorAll('input.mdc-checkbox__native-control').forEach(cb => {
       if (!cb.checked) cb.click();
     });
-    // 自动点击同意按钮
-    document.querySelectorAll('span.mdc-button__label').forEach(label => {
-      if (label.textContent.includes('同意')) {
-        const btn = label.closest('button');
-        if (btn && !btn.disabled) btn.click();
-      }
-    });
+    // 自动点击同意按钮（使用类选择器，避免依赖中文）
+    const consentBtn = document.querySelector(CONSENT_BUTTON);
+    if (consentBtn && !consentBtn.disabled) consentBtn.click();
     // 移除干扰元素
     document.querySelectorAll('div.ft-message-bar, ai-llm-user-onboarding-banner').forEach(el => el.remove());
     // 调整输入框容器样式

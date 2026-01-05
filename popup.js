@@ -1,17 +1,3 @@
-// 默认支持的网站列表
-const DEFAULT_SITES = [
-  'chatgpt.com',
-  'gemini.google.com',
-  'grok.x.ai',
-  'deepseek.com',
-  'www.deepseek.com',
-  'chat.deepseek.com',
-  'doubao.com',
-  'www.doubao.com',
-  'linux.do',
-  'idcflare.com'
-];
-
 const listEl = document.getElementById('site-list');
 const inputEl = document.getElementById('new-site');
 const addBtn = document.getElementById('add-btn');
@@ -58,6 +44,32 @@ function sendNotification(title, message) {
   });
 }
 
+// 标准化站点输入
+function normalizeSiteInput(raw) {
+  return raw
+    .trim()
+    .toLowerCase()
+    .replace(/^https?:\/\//, '')
+    .replace(/\/$/, '')
+    .replace(/\/.*$/, '');
+}
+
+// 验证域名格式
+function isValidDomain(value) {
+  if (!value || value.length > 253) return false;
+  if (value.includes('..')) return false;
+  const host = value.endsWith('.') ? value.slice(0, -1) : value;
+  const labels = host.split('.');
+  if (labels.length < 2) return false;
+  return labels.every(label => (
+    label.length > 0 &&
+    label.length <= 63 &&
+    /^[a-z0-9-]+$/i.test(label) &&
+    !label.startsWith('-') &&
+    !label.endsWith('-')
+  ));
+}
+
 // 渲染列表
 function renderList() {
   listEl.innerHTML = '';
@@ -86,11 +98,13 @@ function renderList() {
 
 // 添加网站
 function addSite() {
-  let val = inputEl.value.trim()
-    .replace(/^https?:\/\//, '')
-    .replace(/\/$/, '')
-    .replace(/\/.*$/, '');
-  if (val && !sites.includes(val)) {
+  const val = normalizeSiteInput(inputEl.value);
+  if (!val) return;
+  if (!isValidDomain(val)) {
+    sendNotification('无效域名', '请输入有效域名，例如 example.com');
+    return;
+  }
+  if (!sites.includes(val)) {
     sites.unshift(val);
     newlyAdded.add(val);
     inputEl.value = '';
@@ -112,7 +126,35 @@ saveBtn.addEventListener('click', async () => {
   const addedSites = sites.filter(s => !savedSites.includes(s) && !DEFAULT_SITES.includes(s));
   const permissionErrors = [];
 
-  // 先保存设置（防止popup关闭后丢失状态）
+  // 先请求新增网站的权限（用户可能拒绝）
+  if (addedSites.length > 0) {
+    try {
+      const ok = await chrome.permissions.request({ origins: addedSites.map(s => `https://${s}/*`) });
+      if (!ok) {
+        // 用户拒绝权限，从列表中移除这些站点
+        addedSites.forEach(site => {
+          newlyAdded.delete(site);
+          const idx = sites.indexOf(site);
+          if (idx !== -1) sites.splice(idx, 1);
+        });
+        permissionErrors.push('新增权限被拒绝');
+        renderList();
+        updateSaveBtn();
+      }
+    } catch (e) {
+      // 权限请求失败，从列表中移除这些站点
+      addedSites.forEach(site => {
+        newlyAdded.delete(site);
+        const idx = sites.indexOf(site);
+        if (idx !== -1) sites.splice(idx, 1);
+      });
+      permissionErrors.push('新增权限失败');
+      renderList();
+      updateSaveBtn();
+    }
+  }
+
+  // 权限请求后保存设置
   await chrome.storage.sync.set({ customSites: sites });
   chrome.runtime.sendMessage({ type: 'UPDATE_SITES', sites });
 
@@ -123,16 +165,6 @@ saveBtn.addEventListener('click', async () => {
       if (!ok) permissionErrors.push('移除权限被拒绝');
     } catch (e) {
       permissionErrors.push('移除权限失败');
-    }
-  }
-
-  // 请求新增网站的权限（可能导致popup关闭，但数据已保存）
-  if (addedSites.length > 0) {
-    try {
-      const ok = await chrome.permissions.request({ origins: addedSites.map(s => `https://${s}/*`) });
-      if (!ok) permissionErrors.push('新增权限被拒绝');
-    } catch (e) {
-      permissionErrors.push('新增权限失败');
     }
   }
 

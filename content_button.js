@@ -1,9 +1,9 @@
 (function() {
-  // 防止重复注入
-  if (document.getElementById('banana-float-btn')) return;
+  // 防止重复注入（检查 Shadow DOM 宿主）
+  if (document.getElementById('banana-shadow-host')) return;
 
-  // 默认设置
-  const DEFAULT_SETTINGS = {
+  // 使用共享配置（由 shared_config.js 注入）
+  const DEFAULT_SETTINGS = self.DEFAULT_SETTINGS || {
     output: '图片和文字',
     aspectRatio: '1:1',
     resolution: '1k',
@@ -11,9 +11,7 @@
     portrait: '允许（所有年龄段）',
     allowSearch: false
   };
-
-  // 设置选项配置
-  const SETTING_OPTIONS = [
+  const SETTING_OPTIONS = self.SETTING_OPTIONS || [
     { key: 'output', label: '输出', options: ['图片和文字', '图片'] },
     { key: 'aspectRatio', label: '宽高比', options: ['1:1', '3:2', '2:3', '3:4', '4:3', '4:5', '5:4', '9:16', '16:9', '21:9'] },
     { key: 'resolution', label: '输出分辨率', options: ['1k', '2k', '4k'] },
@@ -395,13 +393,6 @@
 
     overlay.appendChild(panel);
 
-    // 点击外部关闭下拉框
-    document.addEventListener('click', (e) => {
-      if (!overlay.contains(e.target)) {
-        overlay.querySelectorAll('.custom-select.open').forEach(s => s.classList.remove('open'));
-      }
-    });
-
     return overlay;
   }
 
@@ -506,6 +497,13 @@
 
     shadow.appendChild(btn);
     shadow.appendChild(panel);
+
+    // 点击外部关闭下拉框（使用 composedPath 处理 Shadow DOM 事件）
+    document.addEventListener('click', (e) => {
+      const path = typeof e.composedPath === 'function' ? e.composedPath() : [];
+      if (path.includes(host)) return;
+      panel.querySelectorAll('.custom-select.open').forEach(s => s.classList.remove('open'));
+    });
   }
 
   // 确保 DOM 就绪后初始化

@@ -116,3 +116,22 @@
 - [x] 修复 popup.js 删除网站后索引错误的问题
 - [x] 修复 content_automation.js 429 错误通知无法重置的问题
 - [x] 修复 background.js 通知点击后窗口处理不完善的问题
+- [x] manifest.json host_permissions 缺少 `deepseek.com` 和 `doubao.com`（只有 www 版本），与 DEFAULT_SITES 不一致
+- [x] DEFAULT_SITES 在 background.js、popup.js、content_button.js 三处重复定义，容易不同步
+- [x] SETTING_OPTIONS 结构不一致：content_button.js 有 label 属性，content_automation.js 没有
+- [x] popup.js 在权限请求前就保存了 customSites，用户拒绝权限后站点仍被保存但脚本无法注入
+- [x] content_button.js:3 重复注入检查失效，getElementById('banana-float-btn') 在 closed Shadow DOM 中永远返回 null
+- [x] content_automation.js 使用中文选择器（"收起面板"、"展开面板"、"同意"），非中文环境下失效
+      ```js
+        // 同意按钮使用选择器
+        btn = document.querySelector('button.mdc-button.mat-mdc-button-base.gmat-mdc-button.mat-primary.mat-mdc-button-disabled-interactive.cm-button.mdc-button--unelevated.mat-mdc-unelevated-button')
+        // 展开面板/收起面板 判断条件
+        openBtn = document.querySelector('button svg[data-icon-name="expandAllIcon"]')
+        openBtn = document.querySelector('button svg[data-icon-name="closeIcon"]')
+      ```
+- [x] content_automation.js 的 notified Set 永不清除，相同 URL 的后续图片不会触发通知
+- [x] background.js createBananaWindow() 无痕权限未开启时没有非无痕模式回退方案
+- [x] background.js notificationToWindow Map 在窗口关闭时不会清理，可能导致点击旧通知行为异常
+- [x] popup.js 站点输入无验证，无效域名会导致权限请求和脚本注册失败
+- [x] content_button.js Shadow DOM 外部点击检测可能因事件重定向而不可靠
+- [x] background.js registerContentScripts 没有捕获注册失败的错误，权限不足时静默失败
