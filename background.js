@@ -30,18 +30,27 @@ async function registerContentScripts(sites) {
   }
 }
 
-// 初始化：加载设置并注册脚本
-chrome.runtime.onInstalled.addListener(async () => {
+// 从 storage 加载站点并注册脚本
+async function loadAndRegisterScripts() {
   const data = await chrome.storage.sync.get('customSites');
   const sites = data.customSites || DEFAULT_SITES;
   await registerContentScripts(sites);
-});
+}
+
+// 初始化：加载设置并注册脚本
+chrome.runtime.onInstalled.addListener(loadAndRegisterScripts);
 
 // 启动时也注册
-chrome.runtime.onStartup.addListener(async () => {
-  const data = await chrome.storage.sync.get('customSites');
-  const sites = data.customSites || DEFAULT_SITES;
-  await registerContentScripts(sites);
+chrome.runtime.onStartup.addListener(loadAndRegisterScripts);
+
+// 监听权限变化，权限授予后重新注册脚本
+chrome.permissions.onAdded.addListener(loadAndRegisterScripts);
+
+// 监听 storage 变化，站点列表更新后重新注册脚本
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === 'sync' && changes.customSites) {
+    loadAndRegisterScripts();
+  }
 });
 
 // 通知ID与窗口ID的映射
@@ -119,10 +128,6 @@ chrome.windows.onRemoved.addListener((windowId) => {
 
 // 监听消息
 chrome.runtime.onMessage.addListener((msg, sender) => {
-  if (msg.type === 'UPDATE_SITES') {
-    // 更新网站列表后重新注册脚本
-    registerContentScripts(msg.sites);
-  }
   if (msg.type === 'OPEN_BANANA_CONSOLE') {
     createBananaWindow();
   }

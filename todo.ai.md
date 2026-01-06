@@ -135,3 +135,4 @@
 - [x] popup.js 站点输入无验证，无效域名会导致权限请求和脚本注册失败
 - [x] content_button.js Shadow DOM 外部点击检测可能因事件重定向而不可靠
 - [x] background.js registerContentScripts 没有捕获注册失败的错误，权限不足时静默失败
+- [x] popup.js 在保存customSites时，浏览器会向用户请求权限，发现存在bug，即使用户同意了，customSites的更改未生效，需要再次新增才能生效，改修复这个问题。

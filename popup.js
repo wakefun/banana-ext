@@ -126,37 +126,39 @@ saveBtn.addEventListener('click', async () => {
   const addedSites = sites.filter(s => !savedSites.includes(s) && !DEFAULT_SITES.includes(s));
   const permissionErrors = [];
 
-  // 先请求新增网站的权限（用户可能拒绝）
+  // 先保存设置（防止权限请求弹窗导致 popup 关闭而丢失保存）
+  // 后台通过 storage.onChanged 监听变化，自动重新注册脚本
+  await chrome.storage.sync.set({ customSites: sites });
+
+  // 请求新增网站的权限
   if (addedSites.length > 0) {
     try {
       const ok = await chrome.permissions.request({ origins: addedSites.map(s => `https://${s}/*`) });
       if (!ok) {
-        // 用户拒绝权限，从列表中移除这些站点
+        // 用户拒绝权限，从列表中移除这些站点并回滚保存
         addedSites.forEach(site => {
           newlyAdded.delete(site);
           const idx = sites.indexOf(site);
           if (idx !== -1) sites.splice(idx, 1);
         });
+        await chrome.storage.sync.set({ customSites: sites });
         permissionErrors.push('新增权限被拒绝');
         renderList();
         updateSaveBtn();
       }
     } catch (e) {
-      // 权限请求失败，从列表中移除这些站点
+      // 权限请求失败，从列表中移除这些站点并回滚保存
       addedSites.forEach(site => {
         newlyAdded.delete(site);
         const idx = sites.indexOf(site);
         if (idx !== -1) sites.splice(idx, 1);
       });
+      await chrome.storage.sync.set({ customSites: sites });
       permissionErrors.push('新增权限失败');
       renderList();
       updateSaveBtn();
     }
   }
-
-  // 权限请求后保存设置
-  await chrome.storage.sync.set({ customSites: sites });
-  chrome.runtime.sendMessage({ type: 'UPDATE_SITES', sites });
 
   // 移除被删除网站的权限
   if (removedSites.length > 0) {
