@@ -44,7 +44,28 @@ chrome.runtime.onInstalled.addListener(loadAndRegisterScripts);
 chrome.runtime.onStartup.addListener(loadAndRegisterScripts);
 
 // 监听权限变化，权限授予后重新注册脚本
-chrome.permissions.onAdded.addListener(loadAndRegisterScripts);
+chrome.permissions.onAdded.addListener(async (addedPermissions) => {
+  // 检查是否有待保存的站点（popup 关闭时未能保存）
+  const data = await chrome.storage.session.get(['pendingSites', 'pendingOrigins']);
+  if (data.pendingSites && data.pendingOrigins) {
+    // 验证添加的权限是否包含请求的 origins
+    const addedOrigins = addedPermissions.origins || [];
+    const requestedOrigins = data.pendingOrigins;
+    const allGranted = requestedOrigins.every(o => addedOrigins.includes(o));
+    if (allGranted) {
+      await chrome.storage.sync.set({ customSites: data.pendingSites });
+      await chrome.storage.session.remove(['pendingSites', 'pendingOrigins']);
+      chrome.notifications.create({
+        type: 'basic',
+        iconUrl: 'icons/banana-48.png',
+        title: '设置已保存',
+        message: '请刷新目标网页后生效',
+        priority: 2
+      });
+    }
+  }
+  loadAndRegisterScripts();
+});
 
 // 监听 storage 变化，站点列表更新后重新注册脚本
 chrome.storage.onChanged.addListener((changes, area) => {

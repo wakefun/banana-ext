@@ -128,8 +128,13 @@ saveBtn.addEventListener('click', async () => {
 
   // 先请求新增网站的权限（用户可能拒绝）
   if (addedSites.length > 0) {
+    // 权限请求前存储待保存的站点和请求的 origins（防止 popup 关闭后丢失）
+    const pendingOrigins = addedSites.map(s => `https://${s}/*`);
+    await chrome.storage.session.set({ pendingSites: sites, pendingOrigins });
     try {
-      const ok = await chrome.permissions.request({ origins: addedSites.map(s => `https://${s}/*`) });
+      const ok = await chrome.permissions.request({ origins: pendingOrigins });
+      // 清除待保存状态（popup 未关闭时由 popup 处理保存）
+      await chrome.storage.session.remove(['pendingSites', 'pendingOrigins']);
       if (!ok) {
         // 用户拒绝权限，从列表中移除这些站点
         addedSites.forEach(site => {
@@ -142,6 +147,7 @@ saveBtn.addEventListener('click', async () => {
         updateSaveBtn();
       }
     } catch (e) {
+      await chrome.storage.session.remove(['pendingSites', 'pendingOrigins']);
       // 权限请求失败，从列表中移除这些站点
       addedSites.forEach(site => {
         newlyAdded.delete(site);
