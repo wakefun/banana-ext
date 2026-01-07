@@ -172,6 +172,10 @@ chrome.runtime.onMessage.addListener((msg, sender) => {
 
 // 点击通知时聚焦对应窗口
 chrome.notifications.onClicked.addListener((notifId) => {
+  // 只处理图片生成相关的通知（img- 或 err- 前缀）
+  if (!notifId.startsWith('img-') && !notifId.startsWith('err-')) {
+    return;
+  }
   getNotificationWindowInfo(notifId, (info) => {
     let done = false;
     const finalize = () => {
