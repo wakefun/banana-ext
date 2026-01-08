@@ -160,18 +160,26 @@ saveBtn.addEventListener('click', async () => {
     }
   }
 
-  // 权限请求后保存设置（后台通过 storage.onChanged 监听变化，自动重新注册脚本）
-  await chrome.storage.sync.set({ customSites: sites });
-
-  // 移除被删除网站的权限
+  // 移除被删除网站的权限（先移除权限，成功后再保存）
   if (removedSites.length > 0) {
     try {
       const ok = await chrome.permissions.remove({ origins: removedSites.map(s => `https://${s}/*`) });
-      if (!ok) permissionErrors.push('移除权限被拒绝');
+      if (!ok) {
+        permissionErrors.push('移除权限被拒绝');
+        renderList();
+        updateSaveBtn();
+        return;
+      }
     } catch (e) {
       permissionErrors.push('移除权限失败');
+      renderList();
+      updateSaveBtn();
+      return;
     }
   }
+
+  // 权限处理完成后保存设置（后台通过 storage.onChanged 监听变化，自动重新注册脚本）
+  await chrome.storage.sync.set({ customSites: sites });
 
   // 更新状态
   savedSites = [...sites];
