@@ -152,6 +152,16 @@ chrome.runtime.onMessage.addListener((msg, sender) => {
   if (msg.type === 'OPEN_BANANA_CONSOLE') {
     createBananaWindow();
   }
+  if (msg.type === 'POPUP_OPENED') {
+    // 广播消息到所有标签页，恢复隐藏的香蕉按钮
+    chrome.tabs.query({}, (tabs) => {
+      for (const tab of tabs) {
+        if (tab.id) {
+          chrome.tabs.sendMessage(tab.id, { type: 'SHOW_BUTTON' }).catch(() => {});
+        }
+      }
+    });
+  }
   if (msg.type === 'HIDE_WINDOW') {
     // 最小化当前窗口
     if (sender.tab && typeof sender.tab.windowId === 'number') {

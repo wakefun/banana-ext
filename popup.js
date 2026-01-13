@@ -9,6 +9,9 @@ let newlyAdded = new Set();
 
 // 初始化
 document.addEventListener('DOMContentLoaded', async () => {
+  // 通知 background 恢复隐藏的香蕉按钮
+  chrome.runtime.sendMessage({ type: 'POPUP_OPENED' });
+
   const data = await chrome.storage.sync.get('customSites');
   sites = data.customSites || [...DEFAULT_SITES];
   savedSites = [...sites];

@@ -32,7 +32,7 @@
 
   // 页面元素选择器（使用图标选择器，避免依赖中文）
   const PANEL_OPEN_ICON = 'svg[data-icon-name="expandAllIcon"]';
-  const PANEL_CLOSE_ICON = 'svg[data-icon-name="closeIcon"]';
+  const PANEL_CLOSE_ICON = 'ai-llm-side-panel svg[data-icon-name="closeIcon"]';
   const SELECT_TRIGGER = 'div.cfc-select-value';
   const SELECT_OPTIONS = '.mdc-list-item__primary-text';
   const GROUNDING_TOGGLE = 'button[role="switch"][name="groundingGoogleSearch"]';
@@ -139,16 +139,102 @@
     document.querySelectorAll('.prompt-input-container').forEach(el => el.style.padding = '10px 0 80px 0');
   }
 
+  // 倒计时提示相关状态
+  let countdownInterval = null;
+
+  // 显示自动隐藏倒计时提示
+  function showAutoHideNotification() {
+    // 避免重复显示
+    if (document.getElementById('banana-autohide-toast')) return;
+
+    const toast = document.createElement('div');
+    toast.id = 'banana-autohide-toast';
+    toast.style.cssText = `
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(145deg, #3a3a3a, #2a2a2a);
+      color: #fff;
+      padding: 14px 24px;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+      z-index: 2147483647;
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      transition: opacity 0.3s, transform 0.3s;
+      border: 1px solid rgba(255, 225, 80, 0.2);
+    `;
+
+    let seconds = 3;
+    toast.innerHTML = `
+      <span style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:18px;">🍌</span>
+        <span>窗口将在 <strong id="banana-timer-count" style="color:#FFE150;font-size:16px;">${seconds}</strong> 秒后最小化</span>
+      </span>
+      <button id="banana-cancel-hide" style="
+        background: transparent;
+        border: 1px solid rgba(255, 225, 80, 0.5);
+        color: #FFE150;
+        padding: 6px 14px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 500;
+        transition: all 0.2s;
+      ">取消</button>
+    `;
+
+    document.body.appendChild(toast);
+
+    // 悬停效果
+    const cancelBtn = document.getElementById('banana-cancel-hide');
+    cancelBtn.onmouseenter = () => {
+      cancelBtn.style.background = 'rgba(255, 225, 80, 0.15)';
+      cancelBtn.style.borderColor = '#FFE150';
+    };
+    cancelBtn.onmouseleave = () => {
+      cancelBtn.style.background = 'transparent';
+      cancelBtn.style.borderColor = 'rgba(255, 225, 80, 0.5)';
+    };
+
+    // 倒计时
+    countdownInterval = setInterval(() => {
+      seconds--;
+      const countSpan = document.getElementById('banana-timer-count');
+      if (countSpan) countSpan.textContent = seconds;
+
+      if (seconds <= 0) {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(-50%) translateY(10px)';
+        setTimeout(() => toast.remove(), 300);
+        chrome.runtime.sendMessage({ type: 'HIDE_WINDOW' });
+      }
+    }, 1000);
+
+    // 取消按钮
+    cancelBtn.onclick = () => {
+      clearInterval(countdownInterval);
+      countdownInterval = null;
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateX(-50%) translateY(10px)';
+      setTimeout(() => toast.remove(), 300);
+    };
+  }
+
   // 检查图片生成状态
   function checkGenerationStatus() {
     // 检测是否正在生成（timer出现）
     const timer = document.querySelector('span.cancel-button__timer');
     if (timer && !isGenerating) {
       isGenerating = true;
-      // 0.5s后隐藏窗口到后台
-      setTimeout(() => {
-        chrome.runtime.sendMessage({ type: 'HIDE_WINDOW' });
-      }, 500);
+      // 显示倒计时提示
+      showAutoHideNotification();
     }
 
     // 检测429限速错误

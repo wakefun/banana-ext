@@ -136,3 +136,5 @@
 - [x] content_button.js Shadow DOM 外部点击检测可能因事件重定向而不可靠
 - [x] background.js registerContentScripts 没有捕获注册失败的错误，权限不足时静默失败
 - [x] popup.js 在保存customSites时，浏览器会向用户请求权限，发现存在bug，即使用户同意了，customSites的更改未生效，需要再次新增才能生效，改修复这个问题。
+- [x] 检测到用户完成输入后，页面给一个提示，3秒后自动缩小窗口到后台。用户可以点击取消。
+- [x] 页面的香蕉按钮，增加临时隐藏功能，双击关闭不展示，点击拓展按钮，弹出popup页面的同时，将临时隐藏的按钮再次展示出来。

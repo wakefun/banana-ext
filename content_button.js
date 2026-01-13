@@ -485,15 +485,43 @@
     };
     btn.onmousedown = () => btn.style.transform = 'scale(0.96)';
     btn.onmouseup = () => btn.style.transform = 'translateY(-1px)';
-    btn.onclick = async () => {
-      const isOpen = panel.classList.contains('visible');
-      if (isOpen) {
-        panel.classList.remove('visible');
-      } else {
-        await loadSettings(panel);
-        panel.classList.add('visible');
+
+    // 单击事件（使用延迟区分单击和双击）
+    let clickTimer = null;
+
+    // 双击临时隐藏按钮
+    btn.ondblclick = (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      // 清除待执行的单击定时器
+      if (clickTimer) {
+        clearTimeout(clickTimer);
+        clickTimer = null;
       }
+      btn.style.display = 'none';
+      panel.classList.remove('visible');
     };
+
+    btn.onclick = async () => {
+      if (clickTimer) return; // 双击时忽略第二次单击
+      clickTimer = setTimeout(async () => {
+        clickTimer = null;
+        const isOpen = panel.classList.contains('visible');
+        if (isOpen) {
+          panel.classList.remove('visible');
+        } else {
+          await loadSettings(panel);
+          panel.classList.add('visible');
+        }
+      }, 200);
+    };
+
+    // 监听来自 background 的消息，恢复显示按钮
+    chrome.runtime.onMessage.addListener((request) => {
+      if (request.type === 'SHOW_BUTTON') {
+        btn.style.display = 'flex';
+      }
+    });
 
     shadow.appendChild(btn);
     shadow.appendChild(panel);
